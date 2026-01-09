@@ -1,0 +1,5 @@
+{
+  "name": "BioFlow: Fish-Mouth Filtration",
+  "description": "A 3D interactive simulation of a microplastic water filter inspired by the filter-feeding mechanisms of fish, featuring an AI biomimicry assistant.",
+  "requestFramePermissions": []
+}
