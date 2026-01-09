@@ -31,7 +31,7 @@ export default function App() {
 
   const [chatOpen, setChatOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: 'model', text: 'Hello! I am BioGuide. I can explain how this fish-inspired filter uses fluid dynamics to separate plastics. Ask me how this works in washing machines!' }
+    { role: 'model', text: 'Hello! I am BioGuide. I can explain how this fish-inspired filter uses fluid dynamics to separate plastics, algae, and sediment. Ask me how this works in washing machines!' }
   ]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -61,9 +61,12 @@ export default function App() {
       - Animation Status: ${simulationState.isRunning ? 'Running' : 'Paused'}
       
       Mechanism:
-      - Red particles: Microplastics (ricochet off filter elements).
       - Blue particles: Water (permeates through).
-      - Collection: Plastics move to the "esophagus" (concentrate outlet).
+      - Red particles: Microplastics.
+      - Green particles: Algae/Organic Matter.
+      - Brown particles: Sediment/Sand.
+      
+      All solid particles (Red, Green, Brown) are concentrated into the sludge output due to the "Cross-Flow" effect.
       
       Human Application (Product Mode):
       - This "solid-state" filter has no moving parts.
@@ -102,15 +105,25 @@ export default function App() {
 
         {/* Legend Panel */}
         <div className="bg-[#0f172a]/80 backdrop-blur-md border border-slate-700/50 p-4 rounded-xl shadow-lg pointer-events-auto w-64 animate-in fade-in slide-in-from-left-4 duration-700">
-           <div className="flex items-center gap-3 mb-3">
-              <span className="w-3 h-3 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.8)]"></span>
-              <span className="text-xs text-slate-300 font-medium tracking-wide">Clean Water (Permeates)</span>
-           </div>
-           <div className="flex items-center gap-3">
-              <span className="w-3 h-3 relative flex items-center justify-center">
-                  <span className="absolute w-full h-full bg-red-500 rotate-45 rounded-[1px] shadow-[0_0_8px_rgba(239,68,68,0.6)]"></span>
-              </span>
-              <span className="text-xs text-slate-300 font-medium tracking-wide">Plastic (Ricochets)</span>
+           <div className="space-y-3">
+             <div className="flex items-center gap-3">
+                <span className="w-3 h-3 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.8)]"></span>
+                <span className="text-xs text-slate-300 font-medium tracking-wide">Clean Water</span>
+             </div>
+             <div className="flex items-center gap-3">
+                <span className="w-3 h-3 relative flex items-center justify-center">
+                    <span className="absolute w-full h-full bg-red-500 rotate-45 rounded-[1px] shadow-[0_0_8px_rgba(239,68,68,0.6)]"></span>
+                </span>
+                <span className="text-xs text-slate-300 font-medium tracking-wide">Plastic (Microfibers)</span>
+             </div>
+             <div className="flex items-center gap-3">
+                <span className="w-3 h-3 rounded-sm bg-emerald-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></span>
+                <span className="text-xs text-slate-300 font-medium tracking-wide">Algae / Organic</span>
+             </div>
+             <div className="flex items-center gap-3">
+                <span className="w-3 h-3 rounded-sm bg-amber-700 shadow-[0_0_8px_rgba(180,83,9,0.6)]"></span>
+                <span className="text-xs text-slate-300 font-medium tracking-wide">Sediment / Sand</span>
+             </div>
            </div>
         </div>
       </div>

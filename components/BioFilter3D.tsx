@@ -2,7 +2,7 @@ import React, { useRef, useMemo } from 'react';
 import { useFrame, Canvas } from '@react-three/fiber';
 import { Float, Environment, OrbitControls, Stars, Sparkles, PerspectiveCamera, Text } from '@react-three/drei';
 import * as THREE from 'three';
-import { SimulationState, ViewMode } from '../types';
+import { SimulationState, ViewMode, ParticleType } from '../types';
 
 interface BioFilter3DProps {
   simulationState: SimulationState;
@@ -149,12 +149,17 @@ const ProductHousing = () => {
 
 // --- Physics & Particle System ---
 
-const COUNT_WATER = 600;
-const COUNT_PLASTIC = 150;
+const COUNT_WATER = 500;
+const COUNT_PLASTIC = 100;
+const COUNT_ALGAE = 100;
+const COUNT_SEDIMENT = 100;
 
 const AdvancedParticleSystem = ({ flowRate, density, isRunning, viewMode }: { flowRate: number, density: number, isRunning: boolean, viewMode: ViewMode }) => {
   const waterMesh = useRef<THREE.InstancedMesh>(null);
   const plasticMesh = useRef<THREE.InstancedMesh>(null);
+  const algaeMesh = useRef<THREE.InstancedMesh>(null);
+  const sedimentMesh = useRef<THREE.InstancedMesh>(null);
+  
   const dummy = useMemo(() => new THREE.Object3D(), []);
   
   // Simulation bounds
@@ -165,10 +170,14 @@ const AdvancedParticleSystem = ({ flowRate, density, isRunning, viewMode }: { fl
 
   const particles = useMemo(() => {
     const items = [];
-    const total = COUNT_WATER + COUNT_PLASTIC;
+    const total = COUNT_WATER + COUNT_PLASTIC + COUNT_ALGAE + COUNT_SEDIMENT;
     
     for (let i = 0; i < total; i++) {
-        const isPlastic = i >= COUNT_WATER;
+        let type = ParticleType.WATER;
+        if (i >= COUNT_WATER && i < COUNT_WATER + COUNT_PLASTIC) type = ParticleType.MICROPLASTIC;
+        else if (i >= COUNT_WATER + COUNT_PLASTIC && i < COUNT_WATER + COUNT_PLASTIC + COUNT_ALGAE) type = ParticleType.ALGAE;
+        else if (i >= COUNT_WATER + COUNT_PLASTIC + COUNT_ALGAE) type = ParticleType.SEDIMENT;
+
         const radius = Math.random() * INITIAL_RADIUS;
         const angle = Math.random() * Math.PI * 2;
         
@@ -183,7 +192,7 @@ const AdvancedParticleSystem = ({ flowRate, density, isRunning, viewMode }: { fl
                 (Math.random() - 0.5) * 0.1, 
                 -(0.5 + Math.random() * 0.5)
             ),
-            isPlastic,
+            type,
             rotation: new THREE.Euler(Math.random(), Math.random(), Math.random()),
             rotationSpeed: Math.random() * 0.1,
             filtered: false
@@ -194,10 +203,12 @@ const AdvancedParticleSystem = ({ flowRate, density, isRunning, viewMode }: { fl
 
   useFrame((state, delta) => {
     if (!isRunning) return;
-    if (!waterMesh.current || !plasticMesh.current) return;
+    if (!waterMesh.current || !plasticMesh.current || !algaeMesh.current || !sedimentMesh.current) return;
 
     let waterIdx = 0;
     let plasticIdx = 0;
+    let algaeIdx = 0;
+    let sedimentIdx = 0;
 
     particles.forEach((p) => {
         // 1. Move Forward
@@ -205,7 +216,7 @@ const AdvancedParticleSystem = ({ flowRate, density, isRunning, viewMode }: { fl
         p.position.addScaledVector(p.velocity, speedMultiplier);
 
         // 2. Rotate
-        if (p.isPlastic) {
+        if (p.type !== ParticleType.WATER) {
             p.rotation.x += p.rotationSpeed;
             p.rotation.y += p.rotationSpeed;
         }
@@ -216,15 +227,15 @@ const AdvancedParticleSystem = ({ flowRate, density, isRunning, viewMode }: { fl
         const distFromCenter = Math.sqrt(p.position.x**2 + p.position.y**2);
 
         if (p.position.z < 5 && p.position.z > -10) {
-            if (p.isPlastic) {
-                // Ricochet
+            if (p.type !== ParticleType.WATER) {
+                // SOLIDS (Plastic, Algae, Sediment) Ricochet
                 if (distFromCenter >= currentConeRadius - 0.2) {
                     const angle = Math.atan2(p.position.y, p.position.x);
                     p.position.x = Math.cos(angle) * (currentConeRadius - 0.3);
                     p.position.y = Math.sin(angle) * (currentConeRadius - 0.3);
                     p.velocity.x += -Math.cos(angle) * 0.5;
                     p.velocity.y += -Math.sin(angle) * 0.5;
-                    p.velocity.z *= 1.1;
+                    p.velocity.z *= 1.1; // Accelerate down the chute
                 }
                 // Hydrodynamic focusing
                 p.position.x = THREE.MathUtils.lerp(p.position.x, 0, 0.01);
@@ -263,21 +274,26 @@ const AdvancedParticleSystem = ({ flowRate, density, isRunning, viewMode }: { fl
         dummy.rotation.copy(p.rotation);
         
         // Scale/Visibility logic
-        let s = p.isPlastic ? 0.15 : 0.08;
-        if (!p.isPlastic && p.filtered) s *= 0.1;
+        let s = 0.08;
+        if (p.type === ParticleType.MICROPLASTIC) s = 0.15;
+        if (p.type === ParticleType.ALGAE) s = 0.12;
+        if (p.type === ParticleType.SEDIMENT) s = 0.1;
+        
+        if (p.type === ParticleType.WATER && p.filtered) s *= 0.1;
         dummy.scale.set(s, s, s);
 
         dummy.updateMatrix();
 
-        if (p.isPlastic) {
-            plasticMesh.current.setMatrixAt(plasticIdx++, dummy.matrix);
-        } else {
-            waterMesh.current.setMatrixAt(waterIdx++, dummy.matrix);
-        }
+        if (p.type === ParticleType.WATER) waterMesh.current.setMatrixAt(waterIdx++, dummy.matrix);
+        else if (p.type === ParticleType.MICROPLASTIC) plasticMesh.current.setMatrixAt(plasticIdx++, dummy.matrix);
+        else if (p.type === ParticleType.ALGAE) algaeMesh.current.setMatrixAt(algaeIdx++, dummy.matrix);
+        else if (p.type === ParticleType.SEDIMENT) sedimentMesh.current.setMatrixAt(sedimentIdx++, dummy.matrix);
     });
 
     waterMesh.current.instanceMatrix.needsUpdate = true;
     plasticMesh.current.instanceMatrix.needsUpdate = true;
+    algaeMesh.current.instanceMatrix.needsUpdate = true;
+    sedimentMesh.current.instanceMatrix.needsUpdate = true;
   });
 
   return (
@@ -296,11 +312,31 @@ const AdvancedParticleSystem = ({ flowRate, density, isRunning, viewMode }: { fl
         <instancedMesh ref={plasticMesh} args={[undefined, undefined, COUNT_PLASTIC]}>
             <dodecahedronGeometry args={[1, 0]} />
             <meshStandardMaterial 
-                color={viewMode === 'PRODUCT' ? "#ef4444" : "#ef4444"} 
+                color="#ef4444" 
                 roughness={0.2} 
                 metalness={0.5}
                 emissive="#991b1b"
                 emissiveIntensity={0.5}
+            />
+        </instancedMesh>
+
+        {/* ALGAE - Organic Green Shapes */}
+        <instancedMesh ref={algaeMesh} args={[undefined, undefined, COUNT_ALGAE]}>
+            <icosahedronGeometry args={[1, 0]} />
+            <meshStandardMaterial 
+                color="#22c55e" // Green-500
+                roughness={0.8} 
+                metalness={0.1}
+            />
+        </instancedMesh>
+
+        {/* SEDIMENT - Heavy Brown Blocks */}
+        <instancedMesh ref={sedimentMesh} args={[undefined, undefined, COUNT_SEDIMENT]}>
+            <boxGeometry args={[1, 1, 1]} />
+            <meshStandardMaterial 
+                color="#a16207" // Yellow-800 (Brown)
+                roughness={0.9} 
+                metalness={0.2}
             />
         </instancedMesh>
     </group>

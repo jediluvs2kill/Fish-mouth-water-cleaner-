@@ -14,5 +14,7 @@ export interface SimulationState {
 
 export enum ParticleType {
   WATER = 'WATER',
-  MICROPLASTIC = 'MICROPLASTIC'
+  MICROPLASTIC = 'MICROPLASTIC',
+  ALGAE = 'ALGAE',
+  SEDIMENT = 'SEDIMENT'
 }
